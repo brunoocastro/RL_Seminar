@@ -13,7 +13,8 @@ class Params(NamedTuple):
     action_size: int  # Number of possible actions
     state_size: int  # Number of possible states
     proba_frozen: float  # Probability that a tile is frozen
-    render_each: int = 1000  # Render the environment every n episodes - set to 0 to disable rendering
+    render_each: int = 100  # Render the environment every n episodes - set to 0 to disable rendering
+    render_delay: float = 0.05  # Seconds to pause between rendered frames when playing back an episode
     save_qtable: bool = True  # Whether to save the Q-table after training
     qtable_path: str = "qtable.npy"  # Path to save/load the Q-table
     log_path: str = "training_log.csv"  # Path to save the training log

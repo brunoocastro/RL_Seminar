@@ -14,16 +14,16 @@ from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
 
 params = Params(
     total_episodes=2000,
-    learning_rate=0.3,
-    gamma=0.9995,
-    epsilon=0.3,
+    learning_rate=0.7,
+    gamma=0.95,
+    epsilon=0.1,
     map_size=11,
     seed=123,
     is_slippery=False,
-    n_runs=200,
+    n_runs=2000,
     action_size=None,
     state_size=None,
-    proba_frozen=0.6,
+    proba_frozen=0.85,
 )
 
 # Set the seed
@@ -198,10 +198,10 @@ for map_size in map_sizes:
     st_all = pd.concat([st_all, st])
     qtable = qtables.mean(axis=0)  # Average the Q-table between runs
 
-    plot_states_actions_distribution(
-        states=all_states, actions=all_actions, map_size=map_size
-    )  # Sanity check
-    plot_q_values_map(qtable, env, map_size)
+    # plot_states_actions_distribution(
+    #     states=all_states, actions=all_actions, map_size=map_size
+    # )  # Sanity check
+    # plot_q_values_map(qtable, env, map_size)
     learner.save_qtable((env.action_space.n, env.observation_space.n), name_prefix="qlearning_qtable")
     env.close()
 
@@ -223,7 +223,7 @@ def plot_steps_and_rewards(rewards_df, steps_df):
     plt.show()
 
 
-plot_steps_and_rewards(res_all, st_all)
+# plot_steps_and_rewards(res_all, st_all)
 
 
 ## Now we want to record a video with a trained agent

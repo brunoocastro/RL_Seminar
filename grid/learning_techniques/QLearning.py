@@ -5,6 +5,12 @@ from grid import EpsilonGreedy
 from grid.settings.params import Params
 
 from gymnasium import Env
+try:
+    import matplotlib.pyplot as plt
+    _HAS_MATPLOTLIB = True
+except Exception:
+    plt = None
+    _HAS_MATPLOTLIB = False
 
 class QLearning:
     """Q-learning algorithm.
@@ -62,6 +68,11 @@ class QLearning:
 
 
 
+            # Decide whether this run should include a rendered episode
+            render_this_run = params.render_each > 0 and (run + 1) % params.render_each == 0
+            # We'll render only a single episode for the run (use the last episode of the run)
+            render_episode_index = params.total_episodes - 1 if render_this_run else None
+
             for episode in tqdm(
                 episodes, desc=f"Run {run}/{params.n_runs} - Episodes", leave=False
             ):
@@ -69,11 +80,10 @@ class QLearning:
                 step = 0
                 done = False
                 total_rewards = 0
-
-                render_this_episode = params.render_each > 0 and (episode + 1) % params.render_each == 0
+                # Only collect frames for a single episode in the run (the configured one)
+                render_this_episode = render_episode_index is not None and episode == render_episode_index
+                frames = []
                 while not done:
-                    if render_this_episode:
-                        env.render()
                
                     action = self.explorer.choose_action(
                         action_space=env.action_space, state=state, qtable=self.qtable
@@ -85,6 +95,28 @@ class QLearning:
 
                     # Take the action (a) and observe the outcome state(s') and reward (r)
                     new_state, reward, terminated, truncated, info = env.step(action)
+                    if render_this_episode:
+
+                        # print(f"Step {step}: State {state}, Action {action}, Reward {reward}, New State {new_state}, Terminated {terminated}, Truncated {truncated}")
+                        print(f"Reward: {reward}, Cumulative Reward: {total_rewards}")
+
+                        # Attempt to get an RGB array from the environment. Gym/Gymnasium render APIs differ,
+                        # so try a couple of approaches and fall back if none work.
+                        frame = None
+                        try:
+                            # Some envs accept a `mode` argument
+                            frame = env.render(mode="rgb_array")
+                        except TypeError:
+                            try:
+                                # Gymnasium often returns the frame directly when render() is called
+                                frame = env.render()
+                            except Exception:
+                                frame = None
+                        except Exception:
+                            frame = None
+
+                        if frame is not None:
+                            frames.append(frame)
 
                     done = terminated or truncated
 
@@ -106,6 +138,40 @@ class QLearning:
                 # Log all rewards and steps
                 rewards[episode, run] = total_rewards
                 steps[episode, run] = step
+
+                # If we collected frames for this episode, play them back as a full episode
+                if render_this_episode and len(frames) > 0:
+                    print(f"Rendering episode {episode} of run {run}: {len(frames)} frames")
+                    if _HAS_MATPLOTLIB:
+                        try:
+                            fig, ax = plt.subplots(figsize=(4, 4))
+                            ax.axis('off')
+                            im = ax.imshow(frames[0])
+
+                            # Draw each frame once from start to end, then close the window
+                            for fr in frames:
+                                im.set_data(fr)
+                                fig.canvas.draw()
+                                fig.canvas.flush_events()
+                                # Pause a little so the user can see each frame
+                                try:
+                                    delay = params.render_delay if hasattr(params, "render_delay") else 0.05
+                                    plt.pause(delay)
+                                except Exception:
+                                    plt.pause(0.05)
+                            plt.close(fig)
+                        except Exception:
+                            # If incremental drawing fails, fall back to showing the last frame
+                            try:
+                                fig, ax = plt.subplots(figsize=(4, 4))
+                                ax.axis('off')
+                                ax.imshow(frames[-1])
+                                plt.show()
+                                plt.close(fig)
+                            except Exception:
+                                pass
+                    else:
+                        print("matplotlib not available: skipping full-episode render")
             qtables[run, :, :] = self.qtable
 
         return rewards, steps, episodes, qtables, all_states, all_actions
