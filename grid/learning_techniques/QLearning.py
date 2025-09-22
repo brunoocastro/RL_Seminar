@@ -61,12 +61,8 @@ class QLearning:
         all_states = []
         all_actions = []
 
-        
-
         for run in range(params.n_runs):  # Run several times to account for stochasticity
             self.reset_qtable(env=env)  # Reset the Q-table between runs
-
-
 
             # Decide whether this run should include a rendered episode
             render_this_run = params.render_each > 0 and (run + 1) % params.render_each == 0
@@ -76,7 +72,7 @@ class QLearning:
             for episode in tqdm(
                 episodes, desc=f"Run {run}/{params.n_runs} - Episodes", leave=False
             ):
-                state = env.reset(seed=params.seed)[0]  # Reset the environment
+                state = env.reset()[0]  # Reset the environment
                 step = 0
                 done = False
                 total_rewards = 0

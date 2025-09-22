@@ -1,6 +1,6 @@
-from .EpsilonGreedy import EpsilonGreedy
-from .learning_techniques.QLearning import QLearning
-from .settings.params import Params
+from grid.EpsilonGreedy import EpsilonGreedy
+from grid.learning_techniques.QLearning import QLearning
+from grid.settings.params import Params
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,44 +24,6 @@ params = Params(
     action_size=None,
     state_size=None,
     proba_frozen=0.85,
-)
-
-# Set the seed
-rng = np.random.default_rng(params.seed)
-
-env = gym.make(
-    "FrozenLake-v1",
-    is_slippery=params.is_slippery,
-    render_mode="rgb_array",
-    desc=generate_random_map(
-        size=params.map_size, p=params.proba_frozen, seed=params.seed
-    ),
-)
-
-
-# %%
-# Creating the Q-table
-# ~~~~~~~~~~~~~~~~~~~~
-#
-# In this tutorial we'll be using Q-learning as our learning algorithm and
-# :math:`\epsilon`-greedy to decide which action to pick at each step. You
-# can have a look at the `References section <#References>`__ for some
-# refreshers on the theory. Now, let's create our Q-table initialized at
-# zero with the states number as rows and the actions number as columns.
-#
-
-params = params._replace(action_size=env.action_space.n)
-params = params._replace(state_size=env.observation_space.n)
-print(f"Action size: {params.action_size}")
-print(f"State size: {params.state_size}")
-
-explorer = EpsilonGreedy(
-    epsilon=params.epsilon,
-)
-learner = QLearning(
-    learning_rate=params.learning_rate,
-    gamma=params.gamma,
-    explorer=explorer,
 )
 
 
@@ -146,12 +108,6 @@ def plot_q_values_map(qtable, env, map_size):
     plt.show()
 
 
-# %%
-# As a sanity check, we will plot the distributions of states and actions
-# with the following function:
-#
-
-
 def plot_states_actions_distribution(states, actions, map_size):
     """Plot the distributions of states and actions."""
     labels = {"LEFT": 0, "DOWN": 1, "RIGHT": 2, "UP": 3}
@@ -165,6 +121,17 @@ def plot_states_actions_distribution(states, actions, map_size):
     fig.tight_layout()
     plt.show()
 
+
+##################################
+
+explorer = EpsilonGreedy(
+    epsilon=params.epsilon,
+)
+learner = QLearning(
+    learning_rate=params.learning_rate,
+    gamma=params.gamma,
+    explorer=explorer,
+)
 
 # map_sizes = [4, 7, 9, 11]
 map_sizes = [11]
@@ -180,6 +147,16 @@ for map_size in map_sizes:
             size=map_size, p=params.proba_frozen, seed=params.seed
         ),
     )
+
+    env = RecordVideo(
+        env,
+        video_folder="./videos/frozenlake",
+        episode_trigger=lambda x: x / params.render_each == 0,  # Record every n episodes
+        name_prefix="fl-training",
+    )
+
+    # Add episode statistics tracking
+    env = RecordEpisodeStatistics(env)
 
     params = params._replace(action_size=env.action_space.n)
     params = params._replace(state_size=env.observation_space.n)
@@ -202,7 +179,9 @@ for map_size in map_sizes:
     #     states=all_states, actions=all_actions, map_size=map_size
     # )  # Sanity check
     # plot_q_values_map(qtable, env, map_size)
-    learner.save_qtable((env.action_space.n, env.observation_space.n), name_prefix="qlearning_qtable")
+    learner.save_qtable(
+        (env.action_space.n, env.observation_space.n), name_prefix="qlearning_qtable"
+    )
     env.close()
 
 
@@ -224,42 +203,3 @@ def plot_steps_and_rewards(rewards_df, steps_df):
 
 
 # plot_steps_and_rewards(res_all, st_all)
-
-
-## Now we want to record a video with a trained agent
-env = gym.make(
-    "FrozenLake-v1",
-    is_slippery=params.is_slippery,
-    render_mode="rgb_array",
-    desc=generate_random_map(size=11, p=params.proba_frozen, seed=params.seed),
-)
-
-env = RecordVideo(
-    env,
-    video_folder="./videos",
-    episode_trigger=lambda x: x / 10 == 0,  # Record every 10th episode
-    name_prefix="frozenlake-trained-agent",
-)
-
-# Add episode statistics tracking
-env = RecordEpisodeStatistics(env)
-
-env.action_space.seed(params.seed)
-
-learner.load_qtable()
-
-state, info = env.reset(seed=params.seed)
-done = False
-while not done:
-    action = learner.act(
-        state
-    )
-    state, reward, terminated, truncated, info = env.step(action)
-    done = terminated or truncated
-    if done:
-        break
-
-    env.render()
-env.close()
-
-

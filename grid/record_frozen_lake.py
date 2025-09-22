@@ -9,13 +9,13 @@ from grid.settings.params import Params
 
 params = Params(
     total_episodes=2000,
-    learning_rate=0.8,
+    learning_rate=0.7,
     gamma=0.95,
     epsilon=0.1,
     map_size=11,
-    seed=123,
+    seed=565,
     is_slippery=False,
-    n_runs=20,
+    n_runs=2000,
     action_size=None,
     state_size=None,
     proba_frozen=0.85,
