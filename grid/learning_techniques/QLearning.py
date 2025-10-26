@@ -172,17 +172,21 @@ class QLearning:
 
         return rewards, steps, episodes, qtables, all_states, all_actions
     
+    def _table_name_from_prefix(self, prefix, size = (5,5)):
+        return f"{prefix}_{size[0]}x{size[1]}.npy"
+    
 
-    def save_qtable(self, size= (5, 5),  name_prefix = "qlearning_qtable.npy"):
+    def save_qtable(self, size= (5, 5),  name_prefix = "qlearning_qtable"):
         """Save the Q-table to a file."""
-        filename = f"{name_prefix}_{size[0]}x{size[1]}.npy"
+        filename = self._table_name_from_prefix(name_prefix, size)
         print(f"Saving Q-table to {filename}")
         np.save(filename, self.qtable)
 
-    def load_qtable(self, filename = "qlearning_qtable.npy"):
+    def load_qtable(self, size=(5,5), name_prefix = "qlearning_qtable"):
         """Load the Q-table from a file."""
-        print(f"Loading Q-table from {filename}")
-        self.qtable = np.load(filename)
+        full_filename = self._table_name_from_prefix(name_prefix, size)
+        print(f"Loading Q-table from {full_filename}")
+        self.qtable = np.load(full_filename)
 
     def act(self, state):
         """Choose the best action for a given state."""

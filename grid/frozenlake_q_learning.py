@@ -349,7 +349,7 @@ def plot_states_actions_distribution(states, actions, map_size):
 # Putting it all together:
 #
 
-map_sizes = [4, 7, 9, 11]
+map_sizes = [5]
 res_all = pd.DataFrame()
 st_all = pd.DataFrame()
 

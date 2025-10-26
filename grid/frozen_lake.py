@@ -134,7 +134,7 @@ learner = QLearning(
 )
 
 # map_sizes = [4, 7, 9, 11]
-map_sizes = [11]
+map_sizes = [6]
 res_all = pd.DataFrame()
 st_all = pd.DataFrame()
 

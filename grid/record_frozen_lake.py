@@ -12,7 +12,7 @@ params = Params(
     learning_rate=0.7,
     gamma=0.95,
     epsilon=0.1,
-    map_size=11,
+    map_size=6,
     seed=565,
     is_slippery=False,
     n_runs=2000,
@@ -49,8 +49,7 @@ learner = QLearning(
     explorer=explorer,
 )
 
-learner.load_qtable()
-
+learner.load_qtable((env.action_space.n, env.observation_space.n))
 
 done = False
 step = 0
