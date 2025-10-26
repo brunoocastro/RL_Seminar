@@ -1,181 +1,283 @@
 """
-Jogo interativo do Frozen Lake usando o teclado.
-Use as teclas: W (cima), A (esquerda), S (baixo), D (direita) ou setas
-Pressione Q para sair
+Interactive Frozen Lake game using Pygame.
+Use arrow keys or WASD to move. Press Q to quit.
 """
 import gymnasium as gym
 from gymnasium.envs.toy_text.frozen_lake import generate_random_map
+import pygame
 import sys
-import os
 
-# Desabilitar buffer de saída para melhor interatividade
+# Disable output buffering
+import os
 os.environ['PYTHONUNBUFFERED'] = '1'
 
 
-def get_key_action():
-    """Mapeia a tecla pressionada para uma ação no jogo."""
-    print("\nAções disponíveis:")
-    print("  W ou ↑ = Cima (UP)")
-    print("  A ou ← = Esquerda (LEFT)")
-    print("  S ou ↓ = Baixo (DOWN)")
-    print("  D ou → = Direita (RIGHT)")
-    print("  Q = Sair")
+class FrozenLakeGame:
+    """Simple Pygame-based Frozen Lake game with visual feedback."""
     
-    action_map = {
-        'w': 3,  # UP
-        'a': 0,  # LEFT
-        's': 1,  # DOWN
-        'd': 2,  # RIGHT
-        'W': 3,
-        'A': 0,
-        'S': 1,
-        'D': 2,
-    }
-    
-    while True:
-        key = input("\nEscolha sua ação: ").strip()
+    def __init__(self, map_size=4, is_slippery=False):
+        """Initialize the game."""
+        pygame.init()
         
-        if key.lower() == 'q':
-            return None
+        # Game settings
+        self.map_size = map_size
+        self.is_slippery = is_slippery
+        self.cell_size = 80
+        self.info_width = 300
         
-        if key in action_map:
-            return action_map[key]
+        # Window setup
+        self.window_width = self.map_size * self.cell_size + self.info_width
+        self.window_height = self.map_size * self.cell_size
+        self.screen = pygame.display.set_mode((self.window_width, self.window_height))
+        pygame.display.set_caption("Frozen Lake Game")
+        
+        # Colors
+        self.WHITE = (255, 255, 255)
+        self.BLACK = (0, 0, 0)
+        self.BLUE = (135, 206, 250)
+        self.RED = (255, 100, 100)
+        self.GREEN = (100, 255, 100)
+        self.YELLOW = (255, 255, 100)
+        self.GRAY = (200, 200, 200)
+        
+        # Fonts
+        self.font = pygame.font.Font(None, 36)
+        self.small_font = pygame.font.Font(None, 28)
+        
+        # Create environment
+        if map_size == 4:
+            self.env = gym.make('FrozenLake-v1', is_slippery=is_slippery)
         else:
-            print("Tecla inválida! Use W/A/S/D ou Q para sair.")
-
-
-def print_action_name(action):
-    """Retorna o nome da ação."""
-    actions = {0: "ESQUERDA ←", 1: "BAIXO ↓", 2: "DIREITA →", 3: "CIMA ↑"}
-    return actions.get(action, "DESCONHECIDA")
-
-
-def play_frozen_lake(map_size=4, is_slippery=False):
-    """
-    Joga o Frozen Lake interativamente.
-    
-    Args:
-        map_size: Tamanho do mapa (4, 8, etc)
-        is_slippery: Se True, o ambiente é escorregadio (mais difícil)
-    """
-    # Criar o ambiente com mapa gerado
-    if map_size == 4:
-        # Usar o mapa padrão 4x4
-        env = gym.make(
-            'FrozenLake-v1',
-            is_slippery=is_slippery,
-            render_mode='ansi'
-        )
-    else:
-        # Gerar mapa aleatório para outros tamanhos
-        custom_map = generate_random_map(size=map_size, p=0.8)
-        env = gym.make(
-            'FrozenLake-v1',
-            desc=custom_map,
-            is_slippery=is_slippery,
-            render_mode='ansi'
-        )
-    
-    print("=" * 50)
-    print("🎮 BEM-VINDO AO FROZEN LAKE! 🎮")
-    print("=" * 50)
-    print("\nObjetivo: Chegue ao tesouro (G) sem cair nos buracos (H)")
-    print("Legenda:")
-    print("  S = Start (início)")
-    print("  F = Frozen (gelo - seguro)")
-    print("  H = Hole (buraco - fim do jogo)")
-    print("  G = Goal (objetivo/tesouro)")
-    print(f"\nModo: {'Escorregadio 🧊' if is_slippery else 'Normal 👟'}")
-    print("=" * 50)
-    
-    total_games = 0
-    wins = 0
-    
-    while True:
-        observation, info = env.reset()
-        total_reward = 0
-        steps = 0
-        done = False
+            custom_map = generate_random_map(size=map_size, p=0.8)
+            self.env = gym.make('FrozenLake-v1', desc=custom_map, is_slippery=is_slippery)
         
-        total_games += 1
-        print(f"\n{'='*50}")
-        print(f"🎯 JOGO #{total_games}")
-        print(f"{'='*50}")
-        print("\nEstado inicial:")
-        print(env.render())
+        # Get the map description
+        self.map_desc = self.env.unwrapped.desc
         
-        while not done:
-            # Obter ação do jogador
-            action = get_key_action()
-            
-            if action is None:  # Jogador quer sair
-                print("\n👋 Saindo do jogo...")
-                print(f"\n📊 ESTATÍSTICAS FINAIS:")
-                print(f"  Jogos: {total_games}")
-                print(f"  Vitórias: {wins}")
-                if total_games > 0:
-                    print(f"  Taxa de vitória: {wins/total_games*100:.1f}%")
-                env.close()
-                return
-            
-            # Executar ação
-            observation, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
-            total_reward += reward
-            steps += 1
-            
-            # Mostrar resultado
-            print(f"\n{'─'*50}")
-            print(f"Passo {steps}: {print_action_name(action)}")
-            print(f"{'─'*50}")
-            print(env.render())
-            
-            if terminated:
-                if reward > 0:
-                    wins += 1
-                    print("\n🎉 PARABÉNS! Você chegou ao tesouro! 🏆")
+        # Game state
+        self.wins = 0
+        self.losses = 0
+        self.total_games = 0
+        self.current_state = None
+        self.game_over = False
+        self.clock = pygame.time.Clock()
+    
+    def get_position(self, state):
+        """Convert state number to (row, col) position."""
+        row = state // self.map_size
+        col = state % self.map_size
+        return row, col
+    
+    def draw_grid(self):
+        """Draw the Frozen Lake grid."""
+        for row in range(self.map_size):
+            for col in range(self.map_size):
+                x = col * self.cell_size
+                y = row * self.cell_size
+                
+                # Get cell type (decode from numpy bytes)
+                cell = self.map_desc[row][col].decode('utf-8')
+                
+                # Choose color
+                if cell == 'S':
+                    color = self.GREEN
+                elif cell == 'F':
+                    color = self.BLUE
+                elif cell == 'H':
+                    color = self.RED
+                elif cell == 'G':
+                    color = self.YELLOW
                 else:
-                    print("\n💀 Oh não! Você caiu num buraco!")
+                    color = self.WHITE
                 
-                print(f"\nEstatísticas do jogo:")
-                print(f"  Passos: {steps}")
-                print(f"  Recompensa: {total_reward}")
-                print(f"\n📊 Vitórias: {wins}/{total_games}")
+                # Draw cell
+                pygame.draw.rect(self.screen, color, (x, y, self.cell_size, self.cell_size))
+                pygame.draw.rect(self.screen, self.BLACK, (x, y, self.cell_size, self.cell_size), 2)
                 
-            elif truncated:
-                print("\n⏰ Tempo esgotado!")
+                # Draw letter
+                text = self.font.render(cell, True, self.BLACK)
+                text_rect = text.get_rect(center=(x + self.cell_size // 2, y + self.cell_size // 2))
+                self.screen.blit(text, text_rect)
+    
+    def draw_agent(self):
+        """Draw the agent at current position."""
+        if self.current_state is not None:
+            row, col = self.get_position(self.current_state)
+            x = col * self.cell_size + self.cell_size // 2
+            y = row * self.cell_size + self.cell_size // 2
+            pygame.draw.circle(self.screen, self.BLACK, (x, y), 20, 5)
+    
+    def draw_info(self):
+        """Draw game information on the right side."""
+        info_x = self.map_size * self.cell_size + 20
         
-        # Perguntar se quer jogar novamente
-        play_again = input("\n🎮 Jogar novamente? (S/N): ").strip().lower()
-        if play_again != 's':
-            print("\n👋 Obrigado por jogar!")
-            print(f"\n📊 ESTATÍSTICAS FINAIS:")
-            print(f"  Jogos: {total_games}")
-            print(f"  Vitórias: {wins}")
-            if total_games > 0:
-                print(f"  Taxa de vitória: {wins/total_games*100:.1f}%")
-            env.close()
-            break
+        # Background for info panel
+        pygame.draw.rect(self.screen, self.GRAY, 
+                        (self.map_size * self.cell_size, 0, self.info_width, self.window_height))
+        
+        # Title
+        y = 20
+        title = self.font.render("FROZEN LAKE", True, self.BLACK)
+        self.screen.blit(title, (info_x, y))
+        
+        # Mode
+        y += 50
+        mode_text = "Slippery" if self.is_slippery else "Normal"
+        mode = self.small_font.render(f"Mode: {mode_text}", True, self.BLACK)
+        self.screen.blit(mode, (info_x, y))
+        
+        # Statistics
+        y += 60
+        stats_title = self.font.render("STATISTICS", True, self.BLACK)
+        self.screen.blit(stats_title, (info_x, y))
+        
+        y += 40
+        games_text = self.small_font.render(f"Games: {self.total_games}", True, self.BLACK)
+        self.screen.blit(games_text, (info_x, y))
+        
+        y += 35
+        wins_text = self.small_font.render(f"Wins: {self.wins}", True, self.GREEN)
+        self.screen.blit(wins_text, (info_x, y))
+        
+        y += 35
+        losses_text = self.small_font.render(f"Losses: {self.losses}", True, self.RED)
+        self.screen.blit(losses_text, (info_x, y))
+        
+        # Win rate
+        if self.total_games > 0:
+            y += 35
+            win_rate = (self.wins / self.total_games) * 100
+            rate_text = self.small_font.render(f"Win Rate: {win_rate:.1f}%", True, self.BLACK)
+            self.screen.blit(rate_text, (info_x, y))
+        
+        # Controls
+        y += 80
+        controls_title = self.small_font.render("CONTROLS", True, self.BLACK)
+        self.screen.blit(controls_title, (info_x, y))
+        
+        y += 35
+        wasd = self.small_font.render("WASD or Arrows", True, self.BLACK)
+        self.screen.blit(wasd, (info_x, y))
+        
+        y += 30
+        quit_text = self.small_font.render("Q = Quit", True, self.BLACK)
+        self.screen.blit(quit_text, (info_x, y))
+        
+        y += 30
+        restart_text = self.small_font.render("R = Restart", True, self.BLACK)
+        self.screen.blit(restart_text, (info_x, y))
+        
+        # Game over message
+        if self.game_over:
+            y += 60
+            if hasattr(self, 'last_reward') and self.last_reward > 0:
+                msg = self.font.render("YOU WON!", True, self.GREEN)
+            else:
+                msg = self.font.render("GAME OVER", True, self.RED)
+            self.screen.blit(msg, (info_x, y))
+    
+    def draw(self):
+        """Draw everything on screen."""
+        self.screen.fill(self.WHITE)
+        self.draw_grid()
+        self.draw_agent()
+        self.draw_info()
+        pygame.display.flip()
+    
+    def reset_game(self):
+        """Reset to a new game."""
+        self.current_state, _ = self.env.reset()
+        self.game_over = False
+        self.total_games += 1
+        self.draw()
+    
+    def handle_action(self, action):
+        """Execute an action in the environment."""
+        if not self.game_over:
+            observation, reward, terminated, truncated, _ = self.env.step(action)
+            self.current_state = observation
+            self.last_reward = reward
+            
+            if terminated or truncated:
+                self.game_over = True
+                if reward > 0:
+                    self.wins += 1
+                else:
+                    self.losses += 1
+            
+            self.draw()
+    
+    def run(self):
+        """Main game loop."""
+        self.reset_game()
+        running = True
+        
+        # Key mapping
+        action_keys = {
+            pygame.K_LEFT: 0,   pygame.K_a: 0,  # LEFT
+            pygame.K_DOWN: 1,   pygame.K_s: 1,  # DOWN
+            pygame.K_RIGHT: 2,  pygame.K_d: 2,  # RIGHT
+            pygame.K_UP: 3,     pygame.K_w: 3,  # UP
+        }
+        
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                
+                elif event.type == pygame.KEYDOWN:
+                    # Quit
+                    if event.key == pygame.K_q:
+                        running = False
+                    
+                    # Restart
+                    elif event.key == pygame.K_r:
+                        self.reset_game()
+                    
+                    # Move actions
+                    elif event.key in action_keys and not self.game_over:
+                        action = action_keys[event.key]
+                        self.handle_action(action)
+                    
+                    # Auto-restart if game over
+                    elif self.game_over and event.key in action_keys:
+                        self.reset_game()
+            
+            self.clock.tick(60)  # 60 FPS
+        
+        self.env.close()
+        pygame.quit()
 
 
-if __name__ == "__main__":
-    print("\n🎮 CONFIGURAÇÃO DO JOGO")
+def main():
+    """Main entry point."""
+    print("\n🎮 FROZEN LAKE GAME SETUP")
     print("=" * 50)
     
-    # Escolher tamanho do mapa
+    # Choose map size
     while True:
         try:
-            map_size_input = input("\nTamanho do mapa (4, 8, ou Enter para 4): ").strip()
+            map_size_input = input("\nMap size (4, 8, or Enter for 4): ").strip()
             map_size = int(map_size_input) if map_size_input else 4
             if map_size in [4, 8]:
                 break
-            print("Por favor, escolha 4 ou 8")
+            print("Please choose 4 or 8")
         except ValueError:
-            print("Entrada inválida! Use 4 ou 8")
+            print("Invalid input! Use 4 or 8")
     
-    # Escolher modo
-    slippery_input = input("\nModo escorregadio? (S/N, Enter para N): ").strip().lower()
-    is_slippery = slippery_input == 's'
+    # Choose mode
+    slippery_input = input("\nSlippery mode? (Y/N, Enter for N): ").strip().lower()
+    is_slippery = slippery_input == 'y'
     
-    # Iniciar o jogo
-    play_frozen_lake(map_size=map_size, is_slippery=is_slippery)
+    # Start the game
+    print("\n🎮 Starting game window...")
+    print("Controls: WASD or Arrow Keys to move, Q to quit, R to restart")
+    
+    game = FrozenLakeGame(map_size=map_size, is_slippery=is_slippery)
+    game.run()
+    
+    print("\n👋 Thanks for playing!")
+
+
+if __name__ == "__main__":
+    main()
